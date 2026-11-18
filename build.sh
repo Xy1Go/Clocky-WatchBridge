@@ -21,25 +21,20 @@ echo "==> 1/5 拉取 Clocky 源码"
 rm -rf "$BUILD/Clocky"
 git clone -b main --depth 1 "$REPO_URL" "$BUILD/Clocky"
 
-# 兼容性：仓库用 objectVersion 110（Xcode 27.3），macos-26 runner 的 Xcode 26.6 打不开，
-# 把工程格式降到 77（Xcode 16.3+，仍支持 PBXFileSystemSynchronizedRootGroup）。
+# 兼容性：仓库用 objectVersion 110（Xcode 27.3），部分 runner 的 Xcode 版本打不开，
+# 把工程格式降到 77（Xcode 16.3+，仍支持 PBXFileSystemSynchronizedRootGroup），不影响架构。
 PBPROJ="$BUILD/Clocky/Clocky.xcodeproj/project.pbxproj"
 sed -e 's/objectVersion = 110;/objectVersion = 77;/' \
     -e 's/preferredProjectObjectVersion = 110;/preferredProjectObjectVersion = 77;/' \
     "$PBPROJ" > "$PBPROJ.tmp" && mv "$PBPROJ.tmp" "$PBPROJ"
 echo "    已把 project.pbxproj 工程格式从 110 降到 77"
 
-# 兼容性：xcframework 的 .tbd 里含 arm64e.x1-watchos（Xcode 27 新增架构），
-# Xcode 26.6 的链接器(tapi)不识别，去掉该架构项（保留 arm64/arm64e/arm64_32）。
-find "$BUILD/Clocky" -name '*.tbd' -exec sed -i '' -e 's/arm64e\.x1-watchos, //g' {} +
-echo "    已从 .tbd 中移除 arm64e.x1-watchos"
-
 # ------------------------------------------------------------
 # 2. 编译 watchOS 端 Clocky.app (无签名)
 # ------------------------------------------------------------
 echo "==> 2/5 编译 watchOS 端 Clocky.app"
 
-# 固定 arm64/arm64e：Xcode 26.6 不识别 arm64e.x1，且 .tbd 已去掉该架构。
+# 使用工程默认 ARCHS（arm64 + arm64e + arm64e.x1），Xcode 27 支持全部三种架构。
 xcodebuild \
     -project "$BUILD/Clocky/Clocky.xcodeproj" \
     -scheme Clocky \
@@ -47,7 +42,6 @@ xcodebuild \
     -destination 'generic/platform=watchOS' \
     -derivedDataPath "$BUILD/DerivedDataWatch" \
     PRODUCT_BUNDLE_IDENTIFIER="$WATCH_BUNDLE_ID" \
-    ARCHS="arm64 arm64e" \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY="" \
