@@ -1,0 +1,2 @@
+# 强制 LF，确保 build.sh 在 macOS Runner 上能正常执行
+* text eol=lf
