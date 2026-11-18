@@ -21,6 +21,14 @@ echo "==> 1/5 拉取 Clocky 源码"
 rm -rf "$BUILD/Clocky"
 git clone -b main --depth 1 "$REPO_URL" "$BUILD/Clocky"
 
+# 兼容性：仓库用 objectVersion 110（Xcode 27.3），macos-26 runner 的 Xcode 26.6 打不开，
+# 把工程格式降到 77（Xcode 16.3+，仍支持 PBXFileSystemSynchronizedRootGroup）。
+PBPROJ="$BUILD/Clocky/Clocky.xcodeproj/project.pbxproj"
+sed -e 's/objectVersion = 110;/objectVersion = 77;/' \
+    -e 's/preferredProjectObjectVersion = 110;/preferredProjectObjectVersion = 77;/' \
+    "$PBPROJ" > "$PBPROJ.tmp" && mv "$PBPROJ.tmp" "$PBPROJ"
+echo "    已把 project.pbxproj 工程格式从 110 降到 77"
+
 # ------------------------------------------------------------
 # 2. 编译 watchOS 端 Clocky.app (无签名)
 # ------------------------------------------------------------
