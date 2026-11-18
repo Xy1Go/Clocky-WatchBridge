@@ -29,37 +29,29 @@ sed -e 's/objectVersion = 110;/objectVersion = 77;/' \
     "$PBPROJ" > "$PBPROJ.tmp" && mv "$PBPROJ.tmp" "$PBPROJ"
 echo "    已把 project.pbxproj 工程格式从 110 降到 77"
 
+# 兼容性：xcframework 的 .tbd 里含 arm64e.x1-watchos（Xcode 27 新增架构），
+# Xcode 26.6 的链接器(tapi)不识别，去掉该架构项（保留 arm64/arm64e/arm64_32）。
+find "$BUILD/Clocky" -name '*.tbd' -exec sed -i '' -e 's/arm64e\.x1-watchos, //g' {} +
+echo "    已从 .tbd 中移除 arm64e.x1-watchos"
+
 # ------------------------------------------------------------
 # 2. 编译 watchOS 端 Clocky.app (无签名)
 # ------------------------------------------------------------
 echo "==> 2/5 编译 watchOS 端 Clocky.app"
 
-if ! xcodebuild \
-      -project "$BUILD/Clocky/Clocky.xcodeproj" \
-      -scheme Clocky \
-      -configuration Release \
-      -destination 'generic/platform=watchOS' \
-      -derivedDataPath "$BUILD/DerivedDataWatch" \
-      PRODUCT_BUNDLE_IDENTIFIER="$WATCH_BUNDLE_ID" \
-      CODE_SIGNING_ALLOWED=NO \
-      CODE_SIGNING_REQUIRED=NO \
-      CODE_SIGN_IDENTITY="" \
-      build; then
-  echo "!! 首次编译失败，改用 ARCHS=arm64 arm64e 重试"
-  rm -rf "$BUILD/DerivedDataWatch"
-  xcodebuild \
-      -project "$BUILD/Clocky/Clocky.xcodeproj" \
-      -scheme Clocky \
-      -configuration Release \
-      -destination 'generic/platform=watchOS' \
-      -derivedDataPath "$BUILD/DerivedDataWatch" \
-      PRODUCT_BUNDLE_IDENTIFIER="$WATCH_BUNDLE_ID" \
-      ARCHS="arm64 arm64e" \
-      CODE_SIGNING_ALLOWED=NO \
-      CODE_SIGNING_REQUIRED=NO \
-      CODE_SIGN_IDENTITY="" \
-      build
-fi
+# 固定 arm64/arm64e：Xcode 26.6 不识别 arm64e.x1，且 .tbd 已去掉该架构。
+xcodebuild \
+    -project "$BUILD/Clocky/Clocky.xcodeproj" \
+    -scheme Clocky \
+    -configuration Release \
+    -destination 'generic/platform=watchOS' \
+    -derivedDataPath "$BUILD/DerivedDataWatch" \
+    PRODUCT_BUNDLE_IDENTIFIER="$WATCH_BUNDLE_ID" \
+    ARCHS="arm64 arm64e" \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY="" \
+    build
 
 WATCH_APP="$BUILD/DerivedDataWatch/Build/Products/Release-watchos/$WATCH_APP_NAME.app"
 if [ ! -d "$WATCH_APP" ]; then
