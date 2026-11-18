@@ -29,6 +29,10 @@ sed -e 's/objectVersion = 110;/objectVersion = 77;/' \
     "$PBPROJ" > "$PBPROJ.tmp" && mv "$PBPROJ.tmp" "$PBPROJ"
 echo "    已把 project.pbxproj 工程格式从 110 降到 77"
 
+# 启动加固：给 swizzle 加 NULL 保护 + @try/@catch 兜底，避免私有 API 闪退
+python3 "$ROOT/patch.py" "$BUILD/Clocky"
+echo "    已应用启动加固补丁"
+
 # ------------------------------------------------------------
 # 2. 编译 watchOS 端 Clocky.app (无签名)
 # ------------------------------------------------------------
